@@ -1,9 +1,11 @@
-$fn = 20;
+use <coupler.scad>;
+
+$fn = 30;
 
 // tolerance = 3;
 
 ball_chain_width = 1;
-ball_radius = 4.58/2;
+ball_radius = 4.8/2;
 ball_distance = 6.35;
 
 gear_radius = 65/2;
@@ -11,9 +13,8 @@ gear_rim = 6;
 gear_height = ball_radius*2 + 13;
 
 // TODO(jridey) Should be based upon the ball_distance
-ball_chain_amount = 30;
+ball_chain_amount = 28;
 
-axle_radius = 3;
 spoke_width = ball_chain_width;
 
 module base() {
@@ -35,7 +36,7 @@ module ball_chain() {
             0,
         ]) 
         union() {
-            sphere(ball_radius, $fn=30);
+            sphere(ball_radius);
             rotate([90,0,90]) translate([0,0,5]) cylinder(r=ball_radius, h=10, center=true);
         }
     }
@@ -55,21 +56,19 @@ module spokes() {
     }
 }
 
-module shaft() {
-    translate([0,0,-gear_height/2-1])
-    difference() {
-        cylinder(r=axle_radius, h=gear_height+2, $fs=50);
-        translate([axle_radius - 0.5,-5,1]) cube(size=[5, 10, gear_height+2]);
-    }
-}
+// module shaft() {
+//     translate([0,0,-gear_height/2-1])
+//     difference() {
+//         cylinder(r=axle_radius, h=gear_height+2, $fs=50);
+//         translate([axle_radius - 0.5,-5,1]) cube(size=[5, 10, gear_height+2]);
+//     }
+// }
 
-difference() {
+union() {
     difference() {
-        difference() {
-            base();
-            ball_chain();
-        }
+        base();
+        ball_chain();
         spokes();
     }
-    shaft();
+    translate([0,0,gear_height/2]) coupler();
 }
