@@ -2,7 +2,7 @@
 // Inner diameter.
 id1 = 20; 
 // Length of hole for shaft 1.
-h1 = 16;
+h1 = 14;
 
 // --- M4 threaded shart end
 // Inner diameter of hole for shaft 2. This one fits the 
@@ -86,3 +86,5 @@ module coupler() {
     shafts_chamfers();
   }
 }
+
+coupler();
