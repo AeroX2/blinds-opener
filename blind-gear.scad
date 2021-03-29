@@ -8,12 +8,12 @@ ball_chain_width = 1;
 ball_radius = 4.8/2;
 ball_distance = 6.35;
 
-gear_radius = 65/2;
+gear_radius = 60/2;
 gear_rim = 6;
 gear_height = ball_radius*2 + 13;
 
 // TODO(jridey) Should be based upon the ball_distance
-ball_chain_amount = 28;
+ball_chain_amount = 26;
 
 spoke_width = ball_chain_width;
 
@@ -64,11 +64,9 @@ module spokes() {
 //     }
 // }
 
-union() {
-    difference() {
-        base();
-        ball_chain();
-        spokes();
-    }
-    translate([0,0,gear_height/2]) coupler();
+difference() {
+    base();
+    ball_chain();
+    spokes();
+    translate([0,0,gear_height/2+0.01]) resize([21,21,0], auto=[true,true,false]) coupler();
 }

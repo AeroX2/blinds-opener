@@ -1,3 +1,5 @@
+$fn=30;
+
 // --- Motor end
 // Inner diameter.
 id1 = 20; 
@@ -11,8 +13,8 @@ id2 = 6;
 // Length of hole for shaft 2.
 
 // --- Body Cylinder
-od = 15;
-body_offset_from_center = 2;
+od = 20;
+body_offset_from_center = 0;
 // Width of the slot along the coupler.
 slot_angle = 12;
 // Total coupler length;
@@ -30,7 +32,7 @@ screw_head_to_nut = 7;
 // Offset of the screws' centers from the coupler's center.
 hole_offset_from_center = 5;
 // Offset of the screws' centers from the coupler ends.
-hole_offset_from_end = 5;
+hole_offset_from_end = 7;
 
 // Other
 shaft_chamfer = 0.5;
@@ -67,24 +69,37 @@ module screw(h) {
 // The clamping wedge slot.
 module slot() {
   intersection() {
-    translate([0, -((od/2)-body_offset_from_center), -1]) 
+    translate([0, -((od/2)-body_offset_from_center), -total_height-1]) 
     hull() {
-      rotate([0, 0, slot_angle/2]) cube([eps1, 2*od, total_height+2]);
-      rotate([0, 0, -slot_angle/2]) cube([eps1, 2*od, total_height+2]);
+      rotate([0, 0, slot_angle/2]) cube([eps1, 2*od, total_height*2+2]);
+      rotate([0, 0, -slot_angle/2]) cube([eps1, 2*od, total_height*2+2]);
     }
-    translate([-od/2, 0, -1]) cube([od, od, total_height+2]);
+    translate([-od/2, 0, -total_height-1]) cube([od, od, total_height*2+2]);
   }
 }
 
 // The entire coupler.
 module coupler() {
   difference() {
-    translate([0, body_offset_from_center, 0]) body();
-    translate([0, 0, -eps1]) cylinder(d=id2, h=h1+eps1); 
+    h = 12;
+    union() {
+      translate([0, body_offset_from_center, 0]) body();
+      translate([0, body_offset_from_center, -h]) cylinder(d=od, h=h);
+    }
+    translate([0, 0, -total_height-eps1]) cylinder(d=id2, h=total_height*2+eps1); 
     screw(total_height - hole_offset_from_end);
-    slot();
+    translate([0, -hole_offset_from_center*2, 0]) screw(total_height - hole_offset_from_end);
+    // slot();
     shafts_chamfers();
+
+    translate([0, 0, -h/2]) {
+      cube([100,screw_hole_diameter,h+eps1], center=true);
+      cube([screw_hole_diameter,100,h], center=true);
+    }
+
+    cube([1,100,100], center=true);
   }
+
 }
 
 coupler();

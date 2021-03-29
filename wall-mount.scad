@@ -1,104 +1,108 @@
-$fn=50;
+$fn=20;
 
 wall_screw_diameter = 5.5;
+wall_screw_outer_diameter = 8;
+wall_screw_head_height = 3; 
 wall_screw_distance = 23.5;
 wall_screw_offset = 10;
 wall_screw_tolerance = 5;
 
-box_width = 32;
-box_thickness = 24;
-box_plus_gear = 60;
-box_gear_width = 36;
+gearbox_depth = 32;
+gearbox_thickness = 24;
+gearbox_height_without_motor = 46;
+gearbox_motor_height = 39;
 
-box_height = 46;
-box_full_height = 84;
-box_motor_height = box_full_height - box_height;
-box_motor_diameter = 24;
+gearbox_axle_diameter = 15 + 7; // +7 to account for axle being offset
+gearbox_axle_thickness = 14 + 2; // +2 for tolerance
+gearbox_axle_offset = 15;
 
-screw_hole_diameter = 7.5;
-screw_offset_height = 6;
-screw_offset_thickness = 7;
-screw_length = 33;
-screw_width = 18;
+gearbox_gear_diameter = 68;
+gearbox_gear_thickness = 19 + 2; // +2 for tolerance
 
-center_axle_diameter = 13;
-center_axle_offset = 15;
+gearbox_full_thickness = gearbox_thickness + gearbox_axle_thickness + gearbox_gear_thickness;
+gearbox_full_height = gearbox_height_without_motor + gearbox_motor_height;
 
-blob_width = 16;
-blob_height = 6;
-blob_offset = 31.5 - blob_height/2;
-
-mount_width = box_width;
+mount_width = 30;
 mount_thickness = 5;
 
-ep = 0.001;
+axle_to_top_screw = 33;
+screw_bottom_offset = 12;
+
+box_height = 40;
+box_offset = screw_bottom_offset + wall_screw_distance + axle_to_top_screw;
+box_thickness = 5;
+
+cuo = 200;
+ep = 0.01;
 ep2 = ep*2;
 
+module capsule(height, width, length, width2 = "undefined") {
+    rotate([-90,0,0]) {
+        hull() {
+            translate([-ep,-height/2,0]) if (width2 == "undefined") {
+                cylinder(d=width, h=length);
+            } else {
+                cylinder(d1=width, d2=width2, h=length);
+            }
+            translate([-ep,height/2,0]) if (width2 == "undefined") {
+                cylinder(d=width, h=length);
+            } else {
+                cylinder(d1=width, d2=width2, h=length);
+            }
+        }
+    }
+}
+
 module motor_profile() {
-    translate([0,0,box_motor_height])
-    cube([box_width, box_thickness, box_height]);
+    translate([
+        gearbox_depth/2,
+        0,
+        gearbox_full_height - gearbox_axle_offset - cuo/2,
+    ])
+    capsule(cuo, gearbox_gear_diameter, gearbox_gear_thickness);
 
-    translate([box_width-box_motor_diameter/2,box_motor_diameter/2+3,ep])
-    cylinder(d=box_motor_diameter,h=100);
+    translate([
+        gearbox_depth/2,
+        gearbox_gear_thickness - ep,
+        gearbox_full_height - gearbox_axle_offset - cuo/2,
+    ])
+    capsule(cuo, gearbox_axle_diameter, gearbox_axle_thickness+ep2);
 
-    translate([box_width-3,box_motor_diameter-3,50])
-    rotate([0,0,-60])
-    cube([15,8,100], center=true);
+    translate([
+        0,
+        gearbox_gear_thickness + gearbox_axle_thickness - ep,
+        gearbox_full_height - cuo,
+    ])
+    cube([gearbox_depth, gearbox_thickness+ep2, cuo]);
 }
 
 module screw() {
-    rotate([-90,0,0]) {
-        hull() {
-            translate([-ep,-wall_screw_tolerance/2,0]) cylinder(d=wall_screw_diameter, h=200);
-            translate([-ep,wall_screw_tolerance/2,0]) cylinder(d=wall_screw_diameter, h=200);
-        }
-
-        hull() {
-            translate([-ep,-wall_screw_tolerance/2,mount_thickness*1.5+ep]) cylinder(d1=wall_screw_diameter, d2=wall_screw_diameter*2, h=mount_thickness/2);
-            translate([-ep,wall_screw_tolerance/2,mount_thickness*1.5+ep]) cylinder(d1=wall_screw_diameter, d2=wall_screw_diameter*2, h=mount_thickness/2);
-        }
-    }
+    capsule(wall_screw_tolerance, wall_screw_diameter, 100);
+    capsule(wall_screw_tolerance, wall_screw_outer_diameter, wall_screw_head_height, wall_screw_diameter);
 }
 
 module mounting_plate() {
     difference() {
-        translate([-mount_thickness/2, 0, -mount_thickness*2-ep])
-        cube([box_width+mount_thickness+3, box_plus_gear+mount_thickness+2, box_full_height+mount_thickness*2]);
+        union() {
+            cube([mount_width, mount_thickness, gearbox_full_height]);
 
-        translate([box_width/2, mount_thickness+ep, box_full_height-center_axle_offset])
-        rotate([-90, 0, 0])
-        cylinder(d=75, h=22);
+            translate([0, 0, 0]) {
+                translate([0, 0, box_offset])
+                cube([mount_width, gearbox_gear_thickness+box_thickness, box_height]);
 
-        translate([box_width/2+1, mount_thickness+ep, 0])
-        hull() {
-            translate([0, 0, box_full_height])
-            rotate([-90, 0, 0])
-            cylinder(d=20, h=50);
+                translate([-mount_thickness, mount_thickness+gearbox_gear_thickness, box_offset - 20])
+                cube([mount_width+mount_thickness*2, gearbox_axle_thickness+gearbox_thickness+mount_thickness, box_height + 20]);
+            }
+        }
 
-            translate([0, 0, box_full_height-center_axle_offset-5])
-            rotate([-90, 0, 0])
-            cylinder(d=20, h=50);
+        translate([mount_width/2, mount_thickness+ep, screw_bottom_offset]) rotate([0,0,180]) {
+            screw();
+            translate([0, 0, wall_screw_distance]) screw();
         }
     }
 }
-
 
 difference() {
-    difference() {
-        difference() {
-            mounting_plate();
-            translate([0, box_gear_width, 0])
-            motor_profile();
-        }
-        translate([mount_width/2, -mount_thickness-ep, box_full_height-wall_screw_offset]) screw();
-        translate([mount_width/2, -mount_thickness-ep, box_full_height-wall_screw_offset-wall_screw_distance]) screw();
-        translate([mount_width/2, mount_thickness-ep, box_full_height-wall_screw_offset]) scale(1.4) screw();
-        translate([mount_width/2, mount_thickness-ep, box_full_height-wall_screw_offset-wall_screw_distance]) scale(1.4) screw();
-    }
-    //Lazy method
-    translate([-mount_thickness/2-ep, -mount_thickness/2-ep, -mount_thickness*2-ep2])
-    cube([100,100,40]);
+    mounting_plate();
+    translate([mount_width/2 - gearbox_depth/2, mount_thickness + ep, box_offset-gearbox_full_height+gearbox_axle_offset]) motor_profile(); 
 }
-
-// mounting_box();
-// motor_plate();
