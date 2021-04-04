@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "moduleResolution": "node",
+    "strict": true,
+    "sourceMap": true,
+    "lib": [
+      "ESNext.Array",
+      "DOM"
+    ],
+    "esModuleInterop": true
+  }
+}

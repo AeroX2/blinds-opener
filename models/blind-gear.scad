@@ -5,7 +5,7 @@ $fn = 30;
 // tolerance = 3;
 
 ball_chain_width = 1;
-ball_radius = 4.8/2;
+ball_radius = 5/2;
 ball_distance = 6.35;
 
 gear_radius = 60/2;
@@ -13,7 +13,7 @@ gear_rim = 6;
 gear_height = ball_radius*2 + 13;
 
 // TODO(jridey) Should be based upon the ball_distance
-ball_chain_amount = 24;
+ball_chain_amount = 26;
 
 spoke_width = ball_chain_width;
 
@@ -27,7 +27,7 @@ module base() {
 }
 
 module ball_chain() {
-    offset_radius = gear_radius - ball_radius*3.5;
+    offset_radius = gear_radius - ball_radius*2.5;
     for (i=[1:ball_chain_amount])  {
         rotate(i*(360/ball_chain_amount))
         translate([
@@ -46,12 +46,12 @@ module spokes() {
     rotate((360/ball_chain_amount) / 2)
     for (i=[1:ball_chain_amount])  {
         rotate(i*(360/ball_chain_amount))
-        translate([gear_radius- ball_radius*3,0,0])
+        translate([gear_radius- ball_radius*2.5,0,0])
         rotate([90,0,0])
         union() {
-            cylinder(r=1, h=1.5, center=true);
-            translate([2.3,0,0])
-            cube([5,2,3], center=true);
+            cylinder(r=1, h=2.5, center=true);
+            // translate([2.3,0,0])
+            // cube([5,2,3], center=true);
         }
     }
 }
