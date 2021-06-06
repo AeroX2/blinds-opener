@@ -1,3 +1,4 @@
+
 #include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <DNSServer.h>
@@ -24,8 +25,8 @@ void handle_discovery_packets();
 void handle_ota_update();
 
 Task   commandPackets(10,  -1, &handle_command_packets,   &ts, true);
-Task discoveryPackets(500, -1, &handle_discovery_packets, &ts, true);
-Task        otaUpdate(500, -1, &handle_ota_update,        &ts, true);
+Task discoveryPackets(10, -1, &handle_discovery_packets, &ts, true);
+// Task        otaUpdate(500, -1, &handle_ota_update,        &ts, true);
 
 boolean start_motor();
 void stop_motor();
@@ -33,9 +34,6 @@ void run_motor();
 
 Task runMotor(0, -1, &run_motor, &ts, false, start_motor, stop_motor);
 
-IPAddress ip(192, 168, 1, 63);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 255, 0);
 WiFiServer Tcp(COMMAND_PORT_IN);
 WiFiUDP Udp;
 
@@ -55,9 +53,11 @@ void handle_command_packets() {
     int delta = client.parseInt();
     windUp = direction == 'U' || direction == 'W';
     ignore = direction == 'W' || direction == 'S';
+
+    runMotor.enableDelayed();
   
-//    Serial.println("Command received");
-//    Serial.println(direction);
+    Serial.println("Command received");
+    Serial.println(direction);
   }
 
   while (client.available()) {
@@ -66,8 +66,6 @@ void handle_command_packets() {
 
   // close the connection:
   client.stop();
-
-  runMotor.enableDelayed();
 }
 
 boolean start_motor() {
@@ -87,15 +85,8 @@ boolean start_motor() {
   return false;
 }
 
-int test = 0;
 void run_motor() {
   int position = encoder.read();
-
-//  test++;
-//  if (test > 1000) {
-//    test = 0;
-//    Serial.println(position);
-//  }
 
   if (!ignore && (
        windUp && position > 32000 ||
@@ -105,6 +96,8 @@ void run_motor() {
 }
 
 void stop_motor() {
+  Serial.println("Stopping motor at position");
+  Serial.println(encoder.read());
   digitalWrite(windUp ? MOTOR_FORWARD : MOTOR_BACKWARD, LOW);
 }
 
@@ -115,20 +108,18 @@ void handle_discovery_packets() {
   }
   
   // Receive incoming UDP packets
-//  Serial.printf("Received %d bytes from %s, port %d\n", packetSize, Udp.remoteIP().toString().c_str(), Udp.remotePort());
-  int len = Udp.read(incoming_packet, 255);
-  if (len > 0) {
-    incoming_packet[len] = 0;
-  }
-//  Serial.printf("UDP packet contents: %s\n", incoming_packet);
+  Serial.printf("Received %d bytes from %s, port %d\n", packetSize, Udp.remoteIP().toString().c_str(), Udp.remotePort());
+  int len = Udp.read(incoming_packet, UDP_TX_PACKET_MAX_SIZE);
+  incoming_packet[len] = 0;
+  Serial.printf("UDP packet contents: %s\n", incoming_packet);
 
   if (memcmp(incoming_packet, "\xA5\xA5\xA5\xA5", 4) != 0) {
-//    Serial.println("Unknown UDP discovery packet data receivied");
+    Serial.println("Unknown UDP discovery packet data receivied");
     return;
   }
 
   // Send back a reply, to the IP address and port we got the packet from
-  Udp.beginPacket(Udp.remoteIP(), DISCOVERY_PORT_OUT);
+  Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
   Udp.write("james_blinds_controller");
   Udp.endPacket();
 }
@@ -138,18 +129,18 @@ void handle_ota_update() {
 }
 
 void setup(void) {
-//  Serial.begin(115200);
+  Serial.begin(115200);
   
   WiFiManager wifiManager;
   //wifiManager.setHostname("james_blinds_controller");
-  wifiManager.setSTAStaticIPConfig(ip, gateway, subnet);
+  // wifiManager.setSTAStaticIPConfig(ip, gateway, subnet);
   wifiManager.autoConnect();
   
-//  Serial.println("");
-//  Serial.print("Connected to ");
-//  Serial.println(WiFi.SSID());
-//  Serial.print("IP address: ");
-//  Serial.println(WiFi.localIP());
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(WiFi.SSID());
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
 
   pinMode(MOTOR_SIGNAL_A, INPUT);
   pinMode(MOTOR_SIGNAL_B, INPUT);
@@ -166,7 +157,7 @@ void setup(void) {
 
 //  Serial.println("Tcp and Udp server started");
 
-  ArduinoOTA.setHostname("blinds_controller");
+//  ArduinoOTA.setHostname("blinds_controller");
 //  ArduinoOTA.onStart([]() {
 ////    Serial.println("Start");
 //  });
@@ -184,7 +175,7 @@ void setup(void) {
 //    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
 //    else if (error == OTA_END_ERROR) Serial.println("End Failed");
 //  });
-  ArduinoOTA.begin();
+//  ArduinoOTA.begin();
 }
 
 void loop(void) {

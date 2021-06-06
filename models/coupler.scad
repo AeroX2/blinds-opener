@@ -26,7 +26,7 @@ screw_hole_diameter = 3.3;
 // Diamter of the inset for the screws head.
 screw_head_diameter = 5.7;
 // Diamter of the inset for the screws nuts.
-screw_nut_diameter = 6.5;
+screw_nut_diameter = 6.25;
 // Distance between screw head and nut.
 screw_head_to_nut = 7;
 // Offset of the screws' centers from the coupler's center.
