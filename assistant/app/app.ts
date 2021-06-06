@@ -81,7 +81,7 @@ export class HomeApp {
 
             // Send command to the local device
             return this.app.getDeviceManager()
-                .send(deviceCommand)
+                .send(deviceCommand, { retries: 3, delayInMilliseconds: 500 })
                 .then((result) => {
                     response.setSuccessState(result.deviceId, {});
                 })
