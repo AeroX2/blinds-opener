@@ -4,9 +4,9 @@
 #include <DNSServer.h>
 #include <WiFiClient.h>
 #include <WiFiManager.h>
-#include <ArduinoOTA.h>
 #include <Encoder.h>
 #include <TaskScheduler.h>
+#include <LittleFS.h>
 
 #define MOTOR_SIGNAL_A D2
 #define MOTOR_SIGNAL_B D7
@@ -18,21 +18,26 @@
 #define DISCOVERY_PORT_OUT 3312
 char incoming_packet[256];
 
+#define FILE_NAME "/status.txt"
+#define BLINDS_UP_ENC_POS 32000
+#define BLINDS_DOWN_ENC_POS 100
+#define BLINDS_ENC_TOLERANCE 100
+
 Scheduler ts;
 
 void handle_command_packets();
 void handle_discovery_packets();
 void handle_ota_update();
 
-Task   commandPackets(10,  -1, &handle_command_packets,   &ts, true);
-Task discoveryPackets(10, -1, &handle_discovery_packets, &ts, true);
+// Task   commandPackets(0,  -1, &handle_command_packets,   &ts, true);
+// Task discoveryPackets(1, -1, &handle_discovery_packets, &ts, true);
 // Task        otaUpdate(500, -1, &handle_ota_update,        &ts, true);
 
 boolean start_motor();
 void stop_motor();
 void run_motor();
 
-Task runMotor(0, -1, &run_motor, &ts, false, start_motor, stop_motor);
+Task runMotor(10, -1, &run_motor, &ts, false, start_motor, stop_motor);
 
 WiFiServer Tcp(COMMAND_PORT_IN);
 WiFiUDP Udp;
@@ -47,18 +52,34 @@ void handle_command_packets() {
     return;
   }
 
-//  Serial.println("Client connected");
-  if (client.available()) {
-    char direction = client.read();
-    int delta = client.parseInt();
-    windUp = direction == 'U' || direction == 'W';
-    ignore = direction == 'W' || direction == 'S';
-
-    runMotor.enableDelayed();
-  
-    Serial.println("Command received");
-    Serial.println(direction);
+  Serial.println("Client connected");
+  while(!client.available()) {
+    Serial.println("Delaying");
+    delay(1);
   }
+
+  char direction = client.read();
+  windUp = direction == 'U' || direction == 'W';
+  ignore = direction == 'W' || direction == 'S';
+  
+  Serial.println("Command received");
+  Serial.print(direction);
+  Serial.print(" ");
+  Serial.println(encoder.read());
+  
+  if (direction == 'E') {
+    int e = client.parseInt();
+    Serial.print("Setting encoder to");
+    Serial.println(e);
+    encoder.write(e);
+    return;
+  }
+
+  File f = LittleFS.open(FILE_NAME, "w+");
+  f.print(windUp ? "U" : "D");
+  f.close();
+
+  runMotor.enableDelayed();
 
   while (client.available()) {
     client.read();
@@ -75,10 +96,10 @@ boolean start_motor() {
   }
   
   int position = encoder.read();
-  if (windUp && position < 100) {
+  if (windUp && position < BLINDS_ENC_TOLERANCE) {
     digitalWrite(MOTOR_FORWARD, HIGH);
     return true;
-  } else if (!windUp && position > 100) {
+  } else if (!windUp && position > BLINDS_ENC_TOLERANCE) {
     digitalWrite(MOTOR_BACKWARD, HIGH);
     return true;
   }
@@ -89,8 +110,8 @@ void run_motor() {
   int position = encoder.read();
 
   if (!ignore && (
-       windUp && position > 32000 ||
-      !windUp && position < 100)) {
+       windUp && position > BLINDS_UP_ENC_POS ||
+      !windUp && position < BLINDS_DOWN_ENC_POS)) {
     runMotor.disable();
   }
 }
@@ -119,14 +140,14 @@ void handle_discovery_packets() {
   }
 
   // Send back a reply, to the IP address and port we got the packet from
-  Udp.beginPacket(Udp.remoteIP(), Udp.remotePort());
+  Udp.beginPacket(Udp.remoteIP(), DISCOVERY_PORT_OUT);
   Udp.write("james_blinds_controller");
   Udp.endPacket();
 }
 
-void handle_ota_update() {
-  ArduinoOTA.handle();
-}
+//void handle_ota_update() {
+//  ArduinoOTA.handle();
+//}
 
 void setup(void) {
   Serial.begin(115200);
@@ -155,6 +176,15 @@ void setup(void) {
   Tcp.setNoDelay(true);
   Udp.begin(DISCOVERY_PORT_IN);
 
+  LittleFS.begin();
+  
+  File f = LittleFS.open(FILE_NAME, "r");
+  if (f && f.available() && f.read() == 'U') {
+    Serial.println("Already in up position");
+    encoder.write(BLINDS_UP_ENC_POS);
+  }
+  f.close();
+
 //  Serial.println("Tcp and Udp server started");
 
 //  ArduinoOTA.setHostname("blinds_controller");
@@ -180,4 +210,7 @@ void setup(void) {
 
 void loop(void) {
   ts.execute();
+  handle_command_packets();
+  handle_discovery_packets();
+  delayMicroseconds(10);
 }
